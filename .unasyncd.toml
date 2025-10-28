@@ -1,0 +1,27 @@
+[tool.unasyncd]
+remove_unused_imports = false
+no_cache = false
+force_regen = false
+add_editors_note = true
+exclude = [
+    "Something",
+    "SomethingElse.within"
+]
+
+[tool.unasyncd.files]
+    "src/smartwater/api_async.py" = "src/smartwater/api_sync.py"
+    "tests/test_api_async.py" = "tests/test_api_sync.py"
+
+[tool.unasyncd.add_replacements]
+    "AsyncSmartWaterApi" = "SmartWaterApi"
+    "httpx.AsyncClient" = "httpx.Client"
+    "google.cloud.firestore_v1.AsyncClient" = "google.cloud.firestore_v1.Client"
+    "google.cloud.firestore_v1.Client" = "google.cloud.firestore_v1.Client"
+    "_firestore_client_async" = "_firestore_client"
+    "_firestore_client_sync" = "_firestore_client"
+    "AsyncTaskHelper" = "TaskHelper"
+    "aclose" = "close"
+    "CALL_CONTEXT_ASYNC" = "CALL_CONTEXT_SYNC"
+    "pytest_asyncio" = "pytest"
+
+
