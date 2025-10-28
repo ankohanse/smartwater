@@ -765,7 +765,7 @@ class AsyncSmartWaterApi:
                 
                 response = {
                     "items": { item.id: item.to_dict() for item in coll_snap },
-                    "elapsed": round((datetime.now(timezone.utc)- timestamp).total_seconds(), 1),
+                    "elapsed": round((datetime.now(timezone.utc) - timestamp).total_seconds(), 1),
                 }
 
             elif request["method"] == FirestoreMethod.WATCH:
