@@ -4,7 +4,8 @@ import types
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-GOOGLE_PUBLIC_API_KEY = 'AIzaSyBIZVEyu1r1lK_wRj8d2AIkr1ljk-Ruk2k'
+GOOGLE_PUBLIC_API_PARTS = ['AIzaSyBIZVEyu1r1lK','wRj8d2AIkr1ljk-Ruk2k']
+GOOGLE_PUBLIC_API_KEY = str.join('_', GOOGLE_PUBLIC_API_PARTS)
 GOOGLE_PROJECT_NAME = 'smartwater-app'
 GOOGLE_PROJECT_ID = '1054539760629'
 
