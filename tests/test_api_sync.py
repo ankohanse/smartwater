@@ -24,6 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("grpc").setLevel(logging.WARNING)
 
 
 class TestContext:
@@ -157,12 +158,21 @@ def test_get_data(name, method, loop, exp_except, request):
     assert type(profile) is dict
     assert len(profile) > 0
 
-    gateways_ids = profile.get("config", {}).get("gateway_ids", [])
-    tank_ids = profile.get("config", {}).get("tank_ids", [])
-    pump_ids = profile.get("config", {}).get("pump_ids", [])
+    gateway_ids = []
+    tank_ids = []
+    pump_ids = []
+    account_type = profile.get("accountConfig", {}).get("type")
+    if account_type == "basic":
+        gateway_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("gatewayId")
+        tank_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("tankId")
+        pump_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("pumpId")
+
+        if gateway_id: gateway_ids.append(gateway_id)
+        if tank_id: tank_ids.append(tank_id)
+        if pump_id: pump_ids.append(pump_id)
 
     # Get gateways listed in profile
-    for gateway_id in gateways_ids:
+    for gateway_id in gateway_ids:
         assert type(gateway_id) is str
 
         gateway = context.api.fetch_gateway(gateway_id)
@@ -206,7 +216,7 @@ def test_get_data(name, method, loop, exp_except, request):
 
             assert gateways is not None
             assert type(gateways) is dict
-            assert len(gateways) >= len(gateways_ids)
+            assert len(gateways) >= len(gateway_ids)
                 
             # Get all devices (tanks and pumps) for a gateway
             devices = context.api.fetch_devices(gateway_id)

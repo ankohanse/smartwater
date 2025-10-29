@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("grpc").setLevel(logging.WARNING)
 
 
 TEST_USERNAME = "fill in your DConnect username here"
@@ -32,22 +33,35 @@ def main():
 
         # Retrieve profile of this user.
         profile = api.fetch_profile()
-        logger.info(f"profile: {profile}")
+        logger.info(f"profile ({api.profile_id}): {profile}")
+
+        gateway_ids = []
+        tank_ids = []
+        pump_ids = []
+        account_type = profile.get("accountConfig", {}).get("type")
+        if account_type == "basic":
+            gateway_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("gatewayId")
+            tank_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("tankId")
+            pump_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("pumpId")
+
+            if gateway_id: gateway_ids.append(gateway_id)
+            if tank_id: tank_ids.append(tank_id)
+            if pump_id: pump_ids.append(pump_id)
 
         # Once the profile is available, the calls below can be repeated periodically.
         for t in range(30):
             # Retrieve gateway(s) for the profile
-            for id in profile.get("config", {}).get("gateway_ids", []):
+            for id in gateway_ids:
                 gateway = api.fetch_gateway(id)
                 logger.info(f"gateway {id}: {gateway}")
 
             # Retrieve tanks(s) for the profile
-            for id in profile.get("config", {}).get("tank_ids", []):
+            for id in tank_ids:
                 device = api.fetch_device(id)
                 logger.info(f"tank {id}: {device}")
 
             # Retrieve pumps(s) for the profile
-            for id in profile.get("config", {}).get("pump_ids", []):
+            for id in pump_ids:
                 device = api.fetch_device(id)
                 logger.info(f"pump {id}: {device}")
 

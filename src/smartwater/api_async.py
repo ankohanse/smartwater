@@ -98,11 +98,13 @@ class AsyncSmartWaterApi:
 
     @property
     def profile_id(self) -> str:
+        """The unique profile id. Only available after successfull login."""
         return self._user_id
     
     
     @property
     def closed(self) -> bool:
+        """Returns whether the SmartWaterApi has been closed."""
         if self._http_client:
             return self._http_client.is_closed
         else:
@@ -110,6 +112,8 @@ class AsyncSmartWaterApi:
         
 
     async def close(self):
+        """Safely logout and close all client handles"""
+
         # Logout
         await self.logout()
 
@@ -225,7 +229,7 @@ class AsyncSmartWaterApi:
                 "method": "POST",
                 "url": GOOGLE_APIS_REFRESH_URL,
                 "params": {
-                    "key": base64.b64encode(FIREBASE_PUBLIC_API_KEY, b'+_').rstrip(b'='),
+                    "key": base64.b64encode(FIREBASE_PUBLIC_API_KEY, b'-_').rstrip(b'=').decode('ascii'),
                 },
                 "json": {
                     "grantType": "refresh_token",
@@ -263,7 +267,7 @@ class AsyncSmartWaterApi:
                 "method": "POST",
                 "url": GOOGLE_APIS_LOGIN_URL,
                 "params": {
-                    "key": base64.b64encode(FIREBASE_PUBLIC_API_KEY, b'+_').rstrip(b'='),
+                    "key": base64.b64encode(FIREBASE_PUBLIC_API_KEY, b'-_').rstrip(b'=').decode('ascii'),
                 },
                 "json": {
                     "email": self._username,
@@ -378,6 +382,8 @@ class AsyncSmartWaterApi:
 
 
     async def _logout(self, context: str, method: LoginMethod|None = None):
+        """Internal logout handler"""
+
         # Note: do not call 'async with self._login_lock' here.
         # It will result in a deadlock as login calls _logout from within its lock
 
@@ -407,6 +413,7 @@ class AsyncSmartWaterApi:
 
 
     def _get_expire(self, token: str|None) -> int:
+        """Return the exp field from the token"""
         try:
             payload = jwt.decode(jwt=token, options={"verify_signature": False})
             
@@ -419,67 +426,16 @@ class AsyncSmartWaterApi:
         """
         Get user profile
         """
-        
         await self.login()
 
         _LOGGER.debug(f"Retrieve profile for user '{self._username}' ({self._user_id})")
-        raw = await self._firestore_request(
+        return await self._firestore_request(
             context = f"profile {self._user_id}",
             request = {
                 "method": FirestoreMethod.DOCUMENT,
                 "path": f"profiles/{self._user_id}",
             },
         )
-
-        # Process the resulting raw data
-        # {
-        #   'accountConfig': {
-        #       'type': 'basic', 
-        #       'basicAccountConfig': {
-        #           'pumpId': None, 
-        #           'gatewayId': 'YkqR-yJO819p', 
-        #           'tankId': 'YkqR-yJO819p_8912131093100158'
-        #       }, 
-        #       'sandbox': False
-        #   }, 
-        #   'notifications': {
-        #       'enabled': True, 
-        #       'maintananceAlerts': True, 
-        #       'abnormalUsage': True, 
-        #       'lowTankLevel': True
-        #   }, 
-        #   'name': '24a Christian Road'
-        # }
-        profile = {
-            "name": raw.get("name", self._user_id),
-            "config": {
-                "type": raw.get("accountConfig", {}).get("type", None),
-                "gateway_ids": [],
-                "tank_ids": [],
-                "pump_ids": [],
-            },
-            "notifications": raw.get("notifications", {})
-        }
-
-        account_config = raw.get("accountConfig", {})
-        account_type = account_config.get("type", "basic")
-
-        if account_type == "basic":
-            basic_config = account_config.get("basicAccountConfig", {})
-            gateway_id = basic_config.get("gatewayId", None)
-            tank_id = basic_config.get("tankId", None)
-            pump_id = basic_config.get("pumpId", None)
-
-            if gateway_id is not None:
-                profile["config"]["gateway_ids"].append(gateway_id)
-            if tank_id is not None:
-                profile["config"]["tank_ids"].append(tank_id)
-            if pump_id is not None:
-                profile["config"]["pump_ids"].append(pump_id)
-        else:
-            _LOGGER.warning("Unsupported account config, please contact the integration developer. Details: {raw}")
-
-        return profile
     
 
     async def on_profile(self, callback):
@@ -488,7 +444,6 @@ class AsyncSmartWaterApi:
         - Once initially
         - On each change of the profile
         """
-
         await self.login()
 
         _LOGGER.info(f"Register watch on profile for user '{self._username}' ({self._user_id})")
@@ -506,7 +461,6 @@ class AsyncSmartWaterApi:
         """
         Get gatweway
         """
-
         await self.login()
 
         _LOGGER.debug(f"Retrieve gateway '{gateway_id}'")
@@ -523,7 +477,6 @@ class AsyncSmartWaterApi:
         """
         Get all available gateways
         """
-
         await self.login()
 
         _LOGGER.debug(f"Retrieve all gateways for user '{self._username}' ({self._user_id})")
@@ -551,7 +504,6 @@ class AsyncSmartWaterApi:
         - Once initially
         - On each change of the gateway
         """
-
         await self.login()
 
         _LOGGER.info(f"Register watch on gateway '{gateway_id}'")
@@ -569,7 +521,6 @@ class AsyncSmartWaterApi:
         """
         Get device (tank or pump)
         """
-
         await self.login()
 
         _LOGGER.debug(f"Retrieve device '{device_id}'")
@@ -586,7 +537,6 @@ class AsyncSmartWaterApi:
         """
         Get all available devices for a gatweway
         """
-
         await self.login()
 
         _LOGGER.debug(f"Retrieve all devices for gateway '{gateway_id}'")
@@ -614,7 +564,6 @@ class AsyncSmartWaterApi:
         - Once initially
         - On each change of the gateway
         """
-
         await self.login()
 
         _LOGGER.info(f"Register watch on device '{device_id}'")
@@ -700,7 +649,7 @@ class AsyncSmartWaterApi:
     
 
     async def _firestore_request(self, context: str, request: dict, callback=None):
-        """Firestore document request"""
+        """Firestore document, collection or watch request"""
         
         # Perform the request
         timestamp = datetime.now(timezone.utc)
@@ -856,6 +805,7 @@ class AsyncSmartWaterApi:
 
 
     async def get_diagnostics(self) -> dict[str, Any]:
+        """Return the gathered diagnostics"""
 
         data = {
             "login_time": self._login_time,
@@ -894,12 +844,3 @@ class AsyncSmartWaterApi:
             "history": self._diag_history,
             "details": self._diag_details,
         }
-
-
-    async def _is_async():
-        async def dummy():  # async function in AsyncSmartWaterApi, sync function in SmartWaterApi
-            return None
-        
-        f = dummy()     # Not awaited, so is a future in AsyncSmartWaterApi but is function result in sync SmartWaterApi
-        r = await f
-        return f is not None

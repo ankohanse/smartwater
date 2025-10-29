@@ -32,7 +32,20 @@ async def main():
 
         # Retrieve profile of this user.
         profile = await api.fetch_profile()
-        logger.info(f"profile: {profile}")
+        logger.info(f"profile ({api.profile_id}): {profile}")
+
+        gateway_ids = []
+        tank_ids = []
+        pump_ids = []
+        account_type = profile.get("accountConfig", {}).get("type")
+        if account_type == "basic":
+            gateway_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("gatewayId")
+            tank_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("tankId")
+            pump_id = profile.get("accountConfig", {}).get("basicAccountConfig", {}).get("pumpId")
+
+            if gateway_id: gateway_ids.append(gateway_id)
+            if tank_id: tank_ids.append(tank_id)
+            if pump_id: pump_ids.append(pump_id)
 
         # Once the profile is available, register callbacks.
         # This will return the initial value and any changes.
@@ -40,13 +53,13 @@ async def main():
 
         await api.on_profile(on_profile_change)
     
-        for id in profile.get("config", {}).get("gateway_ids", []):
+        for id in gateway_ids:
             await api.on_gateway(id, on_gateway_change)
 
-        for id in profile.get("config", {}).get("tank_ids", []):
+        for id in tank_ids:
             await api.on_device(id, on_tank_change)
 
-        for id in profile.get("config", {}).get("pump_ids", []):
+        for id in pump_ids:
             await api.on_device(id, on_pump_change)
 
         # Keep the application alive...
