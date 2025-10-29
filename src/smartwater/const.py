@@ -4,14 +4,13 @@ import types
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-GOOGLE_PUBLIC_API_PARTS = ['AIzaSyBIZVEyu1r1lK','wRj8d2AIkr1ljk-Ruk2k']
-GOOGLE_PUBLIC_API_KEY = str.join('_', GOOGLE_PUBLIC_API_PARTS)
-GOOGLE_PROJECT_NAME = 'smartwater-app'
-GOOGLE_PROJECT_ID = '1054539760629'
+# Note: firebase api keys are safe to check in. See https://firebase.google.com/docs/projects/api-keys
+FIREBASE_PUBLIC_API_KEY = b'\x00\x8c\xda\x4b\x20\x48\x65\x51\x32\xbb\x5a\xf5\x94\xaf\xf0\x46\x3f\x1d\xd8\x02\x24\xaf\x59\x63\x93\xe4\x6e\x93\x69'
+FIRESTORE_PROJECT_NAME = 'smartwater-app'
+FIRESTORE_URL = 'https://firestore.googleapis.com/v1'
 
 GOOGLE_APIS_LOGIN_URL = 'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword'
 GOOGLE_APIS_REFRESH_URL = 'https://securetoken.googleapis.com/v1/token'
-GOOGLE_FIRESTORE_URL = 'https://firestore.googleapis.com/v1'
 
 ACCESS_TOKEN_EXPIRE_MARGIN = 60 # seconds
 

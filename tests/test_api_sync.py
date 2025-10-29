@@ -70,7 +70,6 @@ def test_login(name, method, usr, pwd, exp_except, request):
     if exp_except is None:
         assert context.api._login_method is None
         assert context.api._user_id is None
-        assert context.api._project_id is None
 
         match method:
             case 'Any':
@@ -85,7 +84,6 @@ def test_login(name, method, usr, pwd, exp_except, request):
         assert context.api._refresh_token is not None
 
         assert context.api._user_id is not None
-        assert context.api._project_id is None
 
     else:
         with pytest.raises(exp_except):

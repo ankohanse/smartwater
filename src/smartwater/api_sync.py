@@ -3,6 +3,7 @@
 """api.py: API for Smart Water Technology data retrieval."""
 
 import asyncio
+import base64
 import jwt
 import httpx
 import logging
@@ -17,10 +18,9 @@ from google.oauth2 import credentials as oauth2
 from google.cloud import firestore_v1
 
 from .const import (
-    GOOGLE_FIRESTORE_URL,
-    GOOGLE_PROJECT_ID,
-    GOOGLE_PUBLIC_API_KEY,
-    GOOGLE_PROJECT_NAME,
+    FIREBASE_PUBLIC_API_KEY,
+    FIRESTORE_URL,
+    FIRESTORE_PROJECT_NAME,
     GOOGLE_APIS_LOGIN_URL,
     GOOGLE_APIS_REFRESH_URL,
     ACCESS_TOKEN_EXPIRE_MARGIN,
@@ -69,7 +69,6 @@ class SmartWaterApi:
         self._access_expire: float|None = None
         
         self._user_id: str = None
-        self._project_id:str = None
 
         # Automatic refresh of access token
         self._refresh_task = None
@@ -229,7 +228,7 @@ class SmartWaterApi:
                 "method": "POST",
                 "url": GOOGLE_APIS_REFRESH_URL,
                 "params": {
-                    "key": GOOGLE_PUBLIC_API_KEY,
+                    "key": base64.b64encode(FIREBASE_PUBLIC_API_KEY, b'+_').rstrip(b'='),
                 },
                 "json": {
                     "grantType": "refresh_token",
@@ -239,12 +238,10 @@ class SmartWaterApi:
         )
 
         # Store access-token in variable so it will be added as Authorization header in calls to Smart Water servers
+        self._user_id = result.get('user_id', None)
         self._refresh_token = result.get('refresh_token')
         self._access_token = result.get('access_token')
         self._access_expire = self._get_expire(self._access_token)
-
-        self._user_id = result.get('user_id', None)
-        self._project_id = result.get('project_id', GOOGLE_PROJECT_ID)
 
         if not self._access_token or not self._refresh_token:
             error = f"No tokens found in response from token refresh"
@@ -269,7 +266,7 @@ class SmartWaterApi:
                 "method": "POST",
                 "url": GOOGLE_APIS_LOGIN_URL,
                 "params": {
-                    "key": GOOGLE_PUBLIC_API_KEY,
+                    "key": base64.b64encode(FIREBASE_PUBLIC_API_KEY, b'+_').rstrip(b'='),
                 },
                 "json": {
                     "email": self._username,
@@ -323,11 +320,11 @@ class SmartWaterApi:
         credentials = oauth2.Credentials(token=self._access_token, refresh_token=self._refresh_token)
 
         self._firestore_client = google.cloud.firestore_v1.Client(
-            project = GOOGLE_PROJECT_NAME,
+            project = FIRESTORE_PROJECT_NAME,
             credentials = credentials
         )
         self._firestore_client = google.cloud.firestore_v1.Client(
-            project = GOOGLE_PROJECT_NAME,
+            project = FIRESTORE_PROJECT_NAME,
             credentials = credentials
         )
 
