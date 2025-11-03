@@ -181,6 +181,8 @@ class SmartWaterApi:
                     return 
             
             except Exception as ex:
+                #AJH
+                _LOGGER.debug(f"*** Exception in _login: {ex}")
                 error = ex
 
                 # Clear any previous login tokens before trying the next method
@@ -194,6 +196,9 @@ class SmartWaterApi:
     def _login_access_token(self) -> bool:
         """Inspect whether the access token is still valid"""
 
+        #AJH
+        _LOGGER.debug(f"*** _login_access_token 1")
+
         if self._access_token is None or self._access_exp_ts is None:
             # No acces-token to check; silently continue to the next login method (token refresh)
             #AJH
@@ -203,18 +208,29 @@ class SmartWaterApi:
         # inspect the exp field inside the access_token
         if self._access_exp_ts - ACCESS_TOKEN_EXPIRE_MARGIN < utcnow_ts():
             _LOGGER.debug(f"Access-Token expired")
+             #AJH
+            exp_ts = self._access_exp_ts - ACCESS_TOKEN_EXPIRE_MARGIN
+            now_ts = utcnow_ts()
+            _LOGGER.debug(f"*** Access-Token expired; exp={exp_ts}, now={now_ts}")
+            
             return False    # silently continue to the next login method (token refresh)
 
         # Re-use this access token
+        _LOGGER.debug(f"*** _login_access_token 2")
+            
         dt = utcnow_dt()
         context = f"login access_token reuse"
         token = {
             "access_token": self._access_token,
             "access_expire": datetime.fromtimestamp(self._access_exp_ts, timezone.utc)
         }
+        _LOGGER.debug(f"*** _login_access_token 3")
+
         self._add_diagnostics(dt, context, None, None, token)
 
-        #_LOGGER.debug(f"Reuse the access-token")
+        _LOGGER.debug(f"*** _login_access_token 4")
+
+        # _LOGGER.debug(f"Reuse the access-token")
         return True
 
 
@@ -420,14 +436,14 @@ class SmartWaterApi:
             self._login_time = None
 
 
-    def _get_expire(self, token: str|None) -> int:
+    def _get_expire(self, token: str|None) -> float:
         """Return the exp field from the token"""
         try:
             payload = jwt.decode(jwt=token, options={"verify_signature": False})
             
-            return payload.get("exp", 0)
+            return float(payload.get("exp", 0))
         except:            
-            return 0
+            return float(0)
 
 
     def fetch_profile(self):

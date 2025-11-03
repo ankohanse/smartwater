@@ -13,7 +13,7 @@ FIRESTORE_URL = 'https://firestore.googleapis.com/v1'
 GOOGLE_APIS_LOGIN_URL = 'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword'
 GOOGLE_APIS_REFRESH_URL = 'https://securetoken.googleapis.com/v1/token'
 
-ACCESS_TOKEN_EXPIRE_MARGIN = 60 # seconds
+ACCESS_TOKEN_EXPIRE_MARGIN = float(60) # seconds
 
 CALL_CONTEXT_SYNC = "SYNC"
 CALL_CONTEXT_ASYNC = "ASYNC"
