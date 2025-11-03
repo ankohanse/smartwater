@@ -24,6 +24,8 @@ from .const import (
     ACCESS_TOKEN_EXPIRE_MARGIN,
     CALL_CONTEXT_ASYNC,
     CALL_CONTEXT_SYNC,
+    utcnow_ts,
+    utcnow_dt,
 )
 from .data import (
     CallContext,
@@ -63,7 +65,7 @@ class AsyncSmartWaterApi:
 
         self._refresh_token: str|None = None
         self._access_token: str|None = None
-        self._access_expire: float|None = None
+        self._access_exp_ts: float|None = None
         
         self._user_id: str = None
 
@@ -148,7 +150,6 @@ class AsyncSmartWaterApi:
     async def _login(self):
         """Login to Google Apis by trying each of the possible login methods"""        
 
-        # We have four possible login methods that all seem to work for both DConnect (non-expired) and for DAB Live
         # First try to keep using the access token
         # Next, try to refresh that token.
         # Finally try the Google APIs login method
@@ -190,23 +191,23 @@ class AsyncSmartWaterApi:
     async def _login_access_token(self) -> bool:
         """Inspect whether the access token is still valid"""
 
-        if not self._access_token or not self._access_expire:
+        if not self._access_token or not self._access_exp_ts:
             # No acces-token to check; silently continue to the next login method (token refresh)
             return False
 
         # inspect the exp field inside the access_token
-        if self._access_expire - ACCESS_TOKEN_EXPIRE_MARGIN < datetime.now(timezone.utc).timestamp():
+        if self._access_exp_ts - ACCESS_TOKEN_EXPIRE_MARGIN < utcnow_ts():
             _LOGGER.debug(f"Access-Token expired")
             return False    # silently continue to the next login method (token refresh)
 
         # Re-use this access token
-        timestamp = datetime.now(timezone.utc)
+        dt = utcnow_dt()
         context = f"login access_token reuse"
         token = {
             "access_token": self._access_token,
-            "access_expire": datetime.fromtimestamp(self._access_expire, timezone.utc)
+            "access_expire": datetime.fromtimestamp(self._access_exp_ts, timezone.utc)
         }
-        self._add_diagnostics(timestamp, context, None, None, token)
+        self._add_diagnostics(dt, context, None, None, token)
 
         #_LOGGER.debug(f"Reuse the access-token")
         return True
@@ -242,7 +243,7 @@ class AsyncSmartWaterApi:
         self._user_id = result.get('user_id', None)
         self._refresh_token = result.get('refresh_token')
         self._access_token = result.get('access_token')
-        self._access_expire = self._get_expire(self._access_token)
+        self._access_exp_ts = self._get_expire(self._access_token)
 
         if not self._access_token or not self._refresh_token:
             error = f"No tokens found in response from token refresh"
@@ -250,7 +251,7 @@ class AsyncSmartWaterApi:
             raise SmartWaterAuthError(error)
         
         # The refresh of the tokens succeeded. Schedule the next refresh
-        self._login_time = datetime.now(timezone.utc)
+        self._login_time = utcnow_dt()
 
         _LOGGER.info(f"Refreshed the access-token")
         return await self._login_finalize()
@@ -280,7 +281,7 @@ class AsyncSmartWaterApi:
 
         self._refresh_token = result.get('refreshToken')
         self._access_token = result.get('idToken')
-        self._access_expire = self._get_expire(self._access_token)
+        self._access_exp_ts = self._get_expire(self._access_token)
 
         self._user_id = result.get('localId')
 
@@ -290,10 +291,10 @@ class AsyncSmartWaterApi:
             raise SmartWaterAuthError(error)
 
         # if we reach this point then the token was OK
-        self._login_time = datetime.now(timezone.utc)
+        self._login_time = utcnow_dt()
         self._login_method = LoginMethod.GOOGLE_APIS
 
-        _LOGGER.debug(f"Login succeeded using method {self._login_method}")
+        _LOGGER.info(f"Login succeeded")
         return await self._login_finalize()
 
 
@@ -301,7 +302,7 @@ class AsyncSmartWaterApi:
         """Common functionality that needs to be performed regardless of the type of login"""
 
         # Schedule the next refresh of the access token
-        self._refresh_schedule = self._access_expire - ACCESS_TOKEN_EXPIRE_MARGIN
+        self._refresh_schedule = self._access_exp_ts - ACCESS_TOKEN_EXPIRE_MARGIN
 
         # Make sure our login_refresh_handler thread is running
         if self._refresh_task is None:
@@ -350,7 +351,7 @@ class AsyncSmartWaterApi:
             try:
                 # Wait until access token is almost expired, or wait at least 1 minute
                 exp_timestamp = self._refresh_schedule or 0
-                now_timestamp = datetime.now(timezone.utc).timestamp()
+                now_timestamp = utcnow_ts()
                 delay_seconds = max(math.ceil(exp_timestamp - now_timestamp), 60)
 
                 if await self._refresh_task.wait_for_stop(timeout = delay_seconds):
@@ -368,7 +369,7 @@ class AsyncSmartWaterApi:
 
 
     async def logout(self):
-        """Logout from DAB Pumps"""
+        """Logout"""
 
         # Only one thread at a time can check token and do subsequent login or logout if needed.
         # Once one thread is done, the next thread can then check the (new) token.
@@ -397,7 +398,7 @@ class AsyncSmartWaterApi:
         # Instead of closing we will simply forget all tokens. The result is that on a next
         # request, the client will act like it is a new one.
         self._access_token = None
-        self._access_expire = None
+        self._access_exp_ts = None
 
         # Do not clear refresh token when called in a 'login' context and when we were 
         # only checking the access_token
@@ -585,7 +586,7 @@ class AsyncSmartWaterApi:
         """
 
         # Perform the request
-        timestamp = datetime.now(timezone.utc)
+        dt = utcnow_dt()
         response = None
         flags = request.get("flags", {})
         try:
@@ -605,7 +606,7 @@ class AsyncSmartWaterApi:
                 "success": rsp.is_success,
                 "status": f"{rsp.status_code} {rsp.reason_phrase}",
                 "headers": rsp.headers,
-                "elapsed": round((datetime.now(timezone.utc) - timestamp).total_seconds(), 1),
+                "elapsed": round((utcnow_dt() - dt).total_seconds(), 1),
             }
             if rsp.is_success and rsp.headers.get('content-type','').startswith('application/json'):
                 response["json"] = rsp.json()
@@ -621,7 +622,7 @@ class AsyncSmartWaterApi:
             raise SmartWaterConnectError(error)
 
         # Save the diagnostics if requested
-        self._add_diagnostics(timestamp, context, request, response)
+        self._add_diagnostics(dt, context, request, response)
         
         # Check response
         if not response["success"]:
@@ -652,7 +653,7 @@ class AsyncSmartWaterApi:
         """Firestore document, collection or watch request"""
         
         # Perform the request
-        timestamp = datetime.now(timezone.utc)
+        dt = utcnow_dt()
         response = {}
         try:
             if request["method"] == FirestoreMethod.DOCUMENT:
@@ -666,7 +667,7 @@ class AsyncSmartWaterApi:
                     "id": doc_snap.id,
                     "created": doc_snap.create_time,
                     "updated": doc_snap.update_time,
-                    "elapsed": round((datetime.now(timezone.utc) - timestamp).total_seconds(), 1),
+                    "elapsed": round((utcnow_dt() - dt).total_seconds(), 1),
                     "json": doc_json,
                 }
 
@@ -701,7 +702,7 @@ class AsyncSmartWaterApi:
                 
                 response = {
                     "items": { item.id: item.to_dict() for item in coll_snap },
-                    "elapsed": round((datetime.now(timezone.utc) - timestamp).total_seconds(), 1),
+                    "elapsed": round((utcnow_dt() - dt).total_seconds(), 1),
                 }
 
             elif request["method"] == FirestoreMethod.WATCH:
@@ -712,7 +713,7 @@ class AsyncSmartWaterApi:
                 # Helper functions to process the result before we return it to the outer callback
                 def watcher_callback(doc_snapshot, changes, read_time):
                     for doc_snap in doc_snapshot:
-                        timestamp = datetime.now(timezone.utc)
+                        dt = utcnow_dt()
                         context = f"snapshot {doc_snap.id}"
                         request = {
                             "method": FirestoreMethod.SNAPSHOT,
@@ -724,7 +725,7 @@ class AsyncSmartWaterApi:
                             "updated": doc_snap.update_time,
                             "json": doc_snap.to_dict(),
                         }
-                        self._add_diagnostics(timestamp, context, request, response)
+                        self._add_diagnostics(dt, context, request, response)
 
                         callback(doc_snap.id, doc_snap.to_dict())
 
@@ -738,7 +739,7 @@ class AsyncSmartWaterApi:
                 }
 
                 response = {
-                    "elapsed": round((datetime.now(timezone.utc) - timestamp).total_seconds(), 1),
+                    "elapsed": round((utcnow_dt() - dt).total_seconds(), 1),
                 }
             else:
                 raise NotImplementedError(f"FirestoreMethod '{request["method"]}'")
@@ -752,7 +753,7 @@ class AsyncSmartWaterApi:
             raise SmartWaterConnectError(error)
         
         # Save the diagnostics if requested
-        self._add_diagnostics(timestamp, context, request, response)
+        self._add_diagnostics(dt, context, request, response)
         
         if "json" in response:
             return response["json"]
@@ -762,7 +763,7 @@ class AsyncSmartWaterApi:
             return None
 
 
-    def _add_diagnostics(self, timestamp: datetime, context: str, request: dict|None, response: dict|None, token: dict|None = None):
+    def _add_diagnostics(self, dt: datetime, context: str, request: dict|None, response: dict|None, token: dict|None = None):
         """Gather diagnostics"""
 
         if not self._diag_collect:
@@ -774,8 +775,8 @@ class AsyncSmartWaterApi:
         duration = response.get("elapsed", None) if response is not None else None
         duration = round(duration, 0) if duration is not None else None
         
-        history_item = SmartWaterHistoryItem.create(timestamp, context, request, response, token)
-        history_detail = SmartWaterHistoryDetail.create(timestamp, context, request, response, token)
+        history_item = SmartWaterHistoryItem.create(dt, context, request, response, token)
+        history_detail = SmartWaterHistoryDetail.create(dt, context, request, response, token)
 
         # Call durations
         if duration is not None:
@@ -829,7 +830,7 @@ class AsyncSmartWaterApi:
         return {
             "data": data,
             "diagnostics": {
-                "ts": datetime.now(timezone.utc),
+                "dt": utcnow_dt(),
                 "durations": {
                     "counter": durations_counter,
                     "percent": durations_percent,

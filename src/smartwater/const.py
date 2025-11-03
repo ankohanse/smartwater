@@ -1,8 +1,9 @@
-"""Constants for the DAB Pumps integration."""
+"""Constants for the Smart Water library."""
 import logging
-import types
+from datetime import datetime, timezone
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
+
 
 # Note: firebase api keys are safe to check in. See https://firebase.google.com/docs/projects/api-keys
 FIREBASE_PUBLIC_API_KEY = b'\x00\x8c\xda\x4b\x20\x48\x65\x51\x32\xbb\x5a\xf5\x94\xaf\xf0\x46\x3f\x1d\xd8\x02\x24\xaf\x59\x63\x93\xe4\x6e\x93\x69'
@@ -17,3 +18,7 @@ ACCESS_TOKEN_EXPIRE_MARGIN = 60 # seconds
 CALL_CONTEXT_SYNC = "SYNC"
 CALL_CONTEXT_ASYNC = "ASYNC"
 
+
+# Global helper functions
+utcnow_dt = lambda: datetime.now(timezone.utc)
+utcnow_ts = lambda: datetime.now(timezone.utc).timestamp()

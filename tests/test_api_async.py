@@ -78,7 +78,7 @@ async def test_login(name, method, usr, pwd, exp_except, request):
 
         assert context.api._login_method is not None
         assert context.api._access_token is not None
-        assert context.api._access_expire > 0
+        assert context.api._access_exp_ts > 0
         assert context.api._refresh_token is not None
 
         assert context.api._user_id is not None

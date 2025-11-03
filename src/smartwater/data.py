@@ -43,14 +43,14 @@ class SmartWaterDataError(SmartWaterError):
 
 @dataclass
 class SmartWaterHistoryItem:
-    ts: datetime
+    dt: datetime
     op: str
     rsp: str|None = None
  
     @staticmethod
-    def create(timestamp: datetime, context: str , request: dict|None, response: dict|None, token: dict|None) -> 'SmartWaterHistoryItem':
+    def create(dt: datetime, context: str , request: dict|None, response: dict|None, token: dict|None) -> 'SmartWaterHistoryItem':
         item = SmartWaterHistoryItem( 
-            ts = timestamp, 
+            dt = dt, 
             op = context,
         )
 
@@ -69,15 +69,15 @@ class SmartWaterHistoryItem:
 
 @dataclass
 class SmartWaterHistoryDetail:
-    ts: datetime
+    dt: datetime
     req: dict|None
     rsp: dict|None
     token: dict|None
 
     @staticmethod
-    def create(timestamp: datetime, context: str , request: dict|None, response: dict|None, token: dict|None) -> 'SmartWaterHistoryDetail':
+    def create(dt: datetime, context: str , request: dict|None, response: dict|None, token: dict|None) -> 'SmartWaterHistoryDetail':
         detail = SmartWaterHistoryDetail(
-            ts = timestamp, 
+            dt = dt, 
             req = request,
             rsp = response,
             token = token,

@@ -17,8 +17,8 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("grpc").setLevel(logging.WARNING)
 
 
-TEST_USERNAME = "fill in your DConnect username here"
-TEST_PASSWORD = "fill in your DConnect password here"
+TEST_USERNAME = "fill in your SmartWater username here"
+TEST_PASSWORD = "fill in your SmartWater password here"
 #
 # Comment out the line below if username and password are set above
 from tests import TEST_USERNAME, TEST_PASSWORD
@@ -71,6 +71,9 @@ async def main():
             # gateways = await api.fetch_gateways()
             # for gw_id,gw_dict in gateways.items():
             #     logger.info(f"gateway {gw_id}: {gw_dict}")
+
+            #     logger.info("")
+            #     logger.info(f"Query all gateway devices")
 
             #     devices = await api.fetch_devices(gw_id)
             #     for dev_id,dev_dict in devices.items():
