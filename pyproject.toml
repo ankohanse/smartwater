@@ -1,6 +1,6 @@
 [project]
 name = "smartwater"
-version = "0.0.8"
+version = "0.0.9"
 authors = [
   { name="Anko Hanse", email="anko_hanse@hotmail.com" },
 ]

@@ -194,8 +194,10 @@ class SmartWaterApi:
     def _login_access_token(self) -> bool:
         """Inspect whether the access token is still valid"""
 
-        if not self._access_token or not self._access_exp_ts:
+        if self._access_token is None or self._access_exp_ts is None:
             # No acces-token to check; silently continue to the next login method (token refresh)
+            #AJH
+            _LOGGER.debug(f"*** No token; access_token={self._access_token}, exp={self._access_exp_ts}")
             return False
 
         # inspect the exp field inside the access_token
@@ -395,8 +397,10 @@ class SmartWaterApi:
         context = context.lower() if context else ""
 
         # Reduce amount of tracing to only when we are actually logged-in.
-        if self._login_time and method not in [LoginMethod.ACCESS_TOKEN]:
-            _LOGGER.debug(f"Logout")
+        #AJH
+        # if self._login_time and method not in [LoginMethod.ACCESS_TOKEN]:
+        #    _LOGGER.debug(f"Logout")
+        _LOGGER.debug(f"Logout")
 
         # Instead of closing we will simply forget all tokens. The result is that on a next
         # request, the client will act like it is a new one.
