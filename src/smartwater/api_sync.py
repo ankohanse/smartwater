@@ -85,12 +85,14 @@ class SmartWaterApi:
 
         # Http Client.
         self._http_client: httpx.Client = client or httpx.Client()
+        self._http_client_close = False if client else True     # Do not close an external passed client
 
         # Firestore Clients.
         # In the async Api class we also need the sync client as not all operations are supported on async client
         # In the sync Api class this leads to assigning the same variable twice...
         self._firestore_client: google.cloud.firestore_v1.Client = None
         self._firestore_client: google.cloud.firestore_v1.Client = None
+        self._firestore_client_close = False
 
         self._firestore_watch_map: dict[str,Any] = {}
         self._firestore_watch_def: dict[str,dict] = {}
@@ -130,17 +132,17 @@ class SmartWaterApi:
         self.logout()
 
         # Cleanup
-        if self._http_client is not None:
+        if self._http_client is not None and self._http_client_close:
             self._http_client.close()
             self._http_client = None
 
         # In the async Api class we also needed the sync client as not all operations are supported on async client
         # In the sync Api class this leads to checking the same variable twice...
-        if self._firestore_client is not None:
+        if self._firestore_client is not None and self._firestore_client_close:
             self._firestore_client.close()
             self._firestore_client = None
 
-        if self._firestore_client is not None:
+        if self._firestore_client is not None and self._firestore_client_close:
             self._firestore_client.close()
             self._firestore_client = None
 
@@ -322,11 +324,11 @@ class SmartWaterApi:
 
         # In the async Api class we also need the sync client as not all operations are supported on async client
         # In the sync Api class this leads to assigning the same variable twice...
-        if self._firestore_client is not None:
+        if self._firestore_client is not None and self._firestore_client_close:
             self._firestore_client.close()
             self._firestore_client = None
 
-        if self._firestore_client is not None:
+        if self._firestore_client is not None and self._firestore_client_close:
             self._firestore_client.close()
             self._firestore_client = None
 
@@ -340,6 +342,7 @@ class SmartWaterApi:
             project = FIRESTORE_PROJECT_NAME,
             credentials = credentials
         )
+        self._firestore_client_close = True
 
         # Re-register any callbacks
         for watch_def in self._firestore_watch_def.values():
